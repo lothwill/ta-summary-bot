@@ -17,7 +17,7 @@ def get_summary(ticker: str):
         data = yf.download(ticker, start=start, end=end)
 
         if data.empty:
-            return {}
+            raise ValueError("No trading data found. Ticker may be invalid or data is unavailable.")
 
         recent = data.tail(10)
         last_close = recent['Close'][-1]
@@ -59,7 +59,9 @@ def get_summary(ticker: str):
             "50 SMA": round(sma_50, 4) if sma_50 else "N/A",
             "200 SMA": round(sma_200, 4) if sma_200 else "N/A"
         }
+
     except Exception as e:
+        st.error(f"An error occurred while fetching data for {ticker}: {e}")
         return {"Error": str(e)}
 
 if ticker_input:
