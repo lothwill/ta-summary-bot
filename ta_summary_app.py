@@ -59,6 +59,23 @@ if ticker_input:
     summary = get_summary(ticker_input.upper())
     if summary:
         st.subheader(f"TA Summary for {ticker_input.upper()}")
+
+        # Custom alternating row colors
+        st.markdown("""
+            <style>
+            tbody tr:nth-child(odd) {
+                background-color: #ffe6f0 !important;  /* light pink */
+            }
+            tbody tr:nth-child(even) {
+                background-color: #f3e6ff !important;  /* light purple */
+            }
+            thead th {
+                background-color: #fdfdfd !important;
+                font-weight: bold;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+
         df = pd.DataFrame(summary.items(), columns=["Metric", "Value"])
         st.table(df)
     else:
