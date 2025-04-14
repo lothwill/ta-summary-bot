@@ -10,19 +10,19 @@ ticker_input = st.text_input("Enter a stock ticker (e.g., PLTR, SPY, NVDA):")
 
 def get_summary(ticker: str):
     try:
-        end = datetime.today()
-        start = end - timedelta(days=21)
-        data = yf.download(ticker, start=start, end=end)
+        stock = yf.Ticker(ticker)
+        
+        # 1. Recent 14 trading days (for support/resistance & pivot)
+        recent_hist = stock.history(period="21d")
+        if recent_hist.empty or len(recent_hist) < 5:
+            raise ValueError("Recent price history is missing or too short.")
 
-        if data.empty or len(data) < 5:
-            raise ValueError("No recent data retrieved. Ticker may be invalid or data is unavailable.")
-
-        recent = data.tail(10)
-        last_close = recent['Close'][-1]
+        recent = recent_hist.tail(10)
+        last_close = recent['Close'].iloc[-1]
         high = recent['High'].max()
         low = recent['Low'].min()
 
-        last_day = data.iloc[-1]
+        last_day = recent_hist.iloc[-1]
         pivot = (last_day['High'] + last_day['Low'] + last_day['Close']) / 3
         r1 = (2 * pivot) - last_day['Low']
         r2 = pivot + (last_day['High'] - last_day['Low'])
@@ -34,14 +34,15 @@ def get_summary(ticker: str):
         fib_50 = high - 0.5 * diff
         fib_618 = high - 0.618 * diff
 
-        hist = yf.Ticker(ticker).history(period="1y")
+        # 2. Full year of historical data (for 52wk stats and SMAs)
+        hist = stock.history(period="1y")
         if hist.empty or len(hist) < 50:
-            raise ValueError("Insufficient historical data to calculate SMAs.")
+            raise ValueError("Not enough historical data for SMA or 52-week calculations.")
 
         high_52wk = hist['High'].max()
         low_52wk = hist['Low'].min()
-        sma_50 = hist['Close'][-50:].mean()
-        sma_200 = hist['Close'][-200:].mean() if len(hist) >= 200 else None
+        sma_50 = hist['Close'].tail(50).mean()
+        sma_200 = hist['Close'].tail(200).mean() if len(hist) >= 200 else "N/A"
 
         return {
             "Last Price": round(last_close, 4),
@@ -55,11 +56,11 @@ def get_summary(ticker: str):
             "52-Week High": round(high_52wk, 4),
             "52-Week Low": round(low_52wk, 4),
             "50 SMA": round(sma_50, 4),
-            "200 SMA": round(sma_200, 4) if sma_200 else "N/A"
+            "200 SMA": round(sma_200, 4) if sma_200 != "N/A" else "N/A"
         }
 
     except Exception as e:
-        print(f"[ERROR] {ticker.upper()} failed: {e}")  # Debug in terminal
+        print(f"[ERROR] {ticker.upper()} failed: {e}")
         st.error(f"An error occurred while fetching data for {ticker.upper()}: {e}")
         return {"Error": str(e)}
 
